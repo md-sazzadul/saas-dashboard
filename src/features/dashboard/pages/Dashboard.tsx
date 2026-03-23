@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { useDashboard } from "../hooks/useDashboard";
 import { useUsers } from "../hooks/useUsers";
+import type { User } from "../types";
 
 const Dashboard = () => {
   const { data, isLoading, error } = useDashboard();
@@ -62,7 +63,7 @@ const Dashboard = () => {
           </tr>
         </thead>
         <tbody>
-          {users?.map((user: any) => (
+          {users?.map((user: User) => (
             <tr key={user.id} className="border-t hover:bg-gray-50">
               <td className="p-4">{user.name}</td>
               <td
