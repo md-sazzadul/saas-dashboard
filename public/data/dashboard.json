@@ -1,0 +1,14 @@
+{
+  "stats": {
+    "revenue": 12400,
+    "users": 1240,
+    "conversion": 3.2
+  },
+  "chart": [
+    { "name": "Jan", "revenue": 4000 },
+    { "name": "Feb", "revenue": 3000 },
+    { "name": "Mar", "revenue": 5000 },
+    { "name": "Apr", "revenue": 4780 },
+    { "name": "May", "revenue": 5890 }
+  ]
+}
