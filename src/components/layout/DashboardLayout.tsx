@@ -1,8 +1,16 @@
-import { HiHome } from "react-icons/hi2";
+import toast from "react-hot-toast";
+import { HiArrowRightOnRectangle, HiHome } from "react-icons/hi2";
 import { Outlet } from "react-router";
+import { logout } from "../../utils/auth";
 import ThemeToggle from "../ui/ThemeToggle";
 
 const DashboardLayout = () => {
+  const handleLogout = () => {
+    toast.success("Signed out successfully.");
+    // Brief pause so the toast is visible before the redirect
+    setTimeout(logout, 800);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       <aside className="w-64 bg-gray-900 dark:bg-gray-950 dark:border-r dark:border-gray-800 text-white p-6 flex flex-col">
@@ -19,6 +27,16 @@ const DashboardLayout = () => {
             Dashboard
           </a>
         </nav>
+
+        {/* Logout at bottom of sidebar */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400
+            hover:text-white hover:bg-gray-800 transition-colors text-sm w-full mt-auto"
+        >
+          <HiArrowRightOnRectangle className="w-4 h-4" />
+          Sign out
+        </button>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
