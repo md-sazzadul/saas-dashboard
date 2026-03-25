@@ -1,9 +1,10 @@
+import { HiCheckCircle, HiXCircle } from "react-icons/hi2";
 import type { User } from "../types";
 
 const UsersTable = ({ users }: { users: User[] }) => {
   if (!users.length)
     return (
-      <p className="text-gray-500 dark:text-gray-400 mt-6">No users found</p>
+      <p className="text-gray-500 dark:text-gray-400 mt-6">No users found.</p>
     );
 
   return (
@@ -23,7 +24,7 @@ const UsersTable = ({ users }: { users: User[] }) => {
           </tr>
         </thead>
         <tbody>
-          {users?.map((user: User) => (
+          {users.map((user: User) => (
             <tr
               key={user.id}
               className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -39,13 +40,11 @@ const UsersTable = ({ users }: { users: User[] }) => {
                       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                   }`}
                 >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      user.status === "active"
-                        ? "bg-green-500 dark:bg-green-400"
-                        : "bg-red-500 dark:bg-red-400"
-                    }`}
-                  />
+                  {user.status === "active" ? (
+                    <HiCheckCircle className="w-3.5 h-3.5" />
+                  ) : (
+                    <HiXCircle className="w-3.5 h-3.5" />
+                  )}
                   {user.status}
                 </span>
               </td>
