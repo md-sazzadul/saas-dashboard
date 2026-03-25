@@ -17,6 +17,14 @@
   --chart-tooltip-color: #f9fafb;
 }
 
+/* ── react-hot-toast dark mode ────────────────────────────────────────────── */
+/* The Toaster renders outside React's tree, so we target it via :root class  */
+.dark [data-hot-toast] {
+  background: #1f2937 !important; /* gray-800 */
+  color: #f9fafb !important; /* gray-50  */
+  border: 1px solid #374151 !important; /* gray-700 */
+}
+
 /* Smooth color transitions across the board */
 *,
 *::before,
