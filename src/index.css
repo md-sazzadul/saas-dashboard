@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+/* Tailwind v4 dark mode via class strategy */
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --chart-axis-color: #9ca3af;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e5e7eb;
+  --chart-tooltip-color: #111827;
+}
+
+.dark {
+  --chart-axis-color: #6b7280;
+  --chart-tooltip-bg: #1f2937;
+  --chart-tooltip-border: #374151;
+  --chart-tooltip-color: #f9fafb;
+}
+
+/* Smooth color transitions across the board */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
