@@ -1,10 +1,6 @@
 import { useState } from "react";
-import {
-  HiArrowPath,
-  HiEnvelope,
-  HiExclamationCircle,
-  HiLockClosed,
-} from "react-icons/hi2";
+import toast from "react-hot-toast";
+import { HiArrowPath, HiEnvelope, HiLockClosed } from "react-icons/hi2";
 import { useNavigate } from "react-router";
 import ThemeToggle from "../../../components/ui/ThemeToggle";
 import { setToken } from "../../../utils/auth";
@@ -16,19 +12,28 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+
+    const loginToast = toast.loading("Signing in…");
+
     try {
       setLoading(true);
-      setError("");
 
       const res = await loginApi({ email, password });
 
       setToken(res.token);
+      toast.success(`Welcome back, ${res.user.name}!`, { id: loginToast });
       navigate("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      toast.error(
+        err instanceof Error ? err.message : "Login failed. Please try again.",
+        { id: loginToast },
+      );
     } finally {
       setLoading(false);
     }
@@ -48,13 +53,6 @@ const Login = () => {
           Sign in to your account
         </p>
 
-        {error && (
-          <p className="text-red-500 dark:text-red-400 text-sm mb-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2 flex items-center gap-2">
-            <HiExclamationCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </p>
-        )}
-
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Email
         </label>
@@ -63,6 +61,7 @@ const Login = () => {
           <input
             type="email"
             placeholder="admin@example.com"
+            value={email}
             className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800
               text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
               pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500
@@ -79,6 +78,7 @@ const Login = () => {
           <input
             type="password"
             placeholder="123456"
+            value={password}
             className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800
               text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
               pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500
@@ -94,7 +94,7 @@ const Login = () => {
             disabled:opacity-60 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
         >
           {loading && <HiArrowPath className="w-4 h-4 animate-spin" />}
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Signing in…" : "Sign in"}
         </button>
       </div>
     </div>
