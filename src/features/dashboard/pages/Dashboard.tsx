@@ -4,11 +4,15 @@ import ChartSection from "../components/ChartSection";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import Filters from "../components/Filters";
+import Pagination from "../components/Pagination";
 import Skeleton from "../components/Skeleton";
 import StatsCards from "../components/StatsCards";
 import UsersTable from "../components/UsersTable";
 import { useDashboard } from "../hooks/useDashboard";
+import { usePagination } from "../hooks/usePagination";
 import { useUsers } from "../hooks/useUsers";
+
+const PAGE_SIZE = 5;
 
 const Dashboard = () => {
   const [filter, setFilter] = useState("all");
@@ -25,8 +29,16 @@ const Dashboard = () => {
     if (usersError) toast.error("Failed to load users.");
   }, [usersError]);
 
+  const filteredUsers =
+    filter === "all"
+      ? users
+      : users.filter((u: { status: string }) => u.status === filter);
+
+  const pagination = usePagination(filteredUsers, PAGE_SIZE);
+
   const handleFilterChange = (value: string) => {
     setFilter(value);
+    pagination.reset();
     const label = value === "all" ? "all users" : `${value} users`;
     toast.success(`Showing ${label}`, { duration: 2000 });
   };
@@ -34,11 +46,6 @@ const Dashboard = () => {
   if (isLoading) return <Skeleton />;
   if (dashError) return <ErrorState />;
   if (!data) return <EmptyState />;
-
-  const filteredUsers =
-    filter === "all"
-      ? users
-      : users.filter((u: { status: string }) => u.status === filter);
 
   return (
     <div>
@@ -48,7 +55,16 @@ const Dashboard = () => {
 
       <ChartSection data={data.chart} />
 
-      <UsersTable users={filteredUsers} />
+      <div className="mt-6 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <UsersTable users={pagination.paginatedItems} />
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.goToPage}
+        />
+      </div>
     </div>
   );
 };
