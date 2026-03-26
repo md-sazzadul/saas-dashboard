@@ -16,6 +16,9 @@ type CardConfig = {
 
 // Mini sparkline SVG component
 const Sparkline = ({ data, color }: { data: number[]; color: string }) => {
+  // Need at least 2 points to draw a line
+  if (!data || data.length < 2) return null;
+
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -84,14 +87,40 @@ type Props = {
   chartData?: ChartData[];
 };
 
-const StatsCards = ({ stats, chartData = [] }: Props) => {
-  const revenueHistory =
-    chartData.length > 0
-      ? chartData.map((d) => d.revenue)
-      : [3200, 4100, 3800, 5200, 4800, 6100, stats.revenue];
+/** Build a safe sparkline history array. Falls back to a flat line using the
+ *  current stat value so the card still renders cleanly with no chart data. */
+const buildSparkData = (
+  chartData: ChartData[],
+  extract: (d: ChartData) => number,
+  fallbackValue: number,
+): number[] => {
+  if (chartData.length > 0) {
+    const values = chartData.map(extract).filter(Number.isFinite);
+    if (values.length >= 2) return values;
+  }
+  // Flat fallback — two identical points so the sparkline still renders
+  return [fallbackValue, fallbackValue];
+};
 
-  const usersHistory = [890, 920, 980, 1050, 1100, 1180, stats.users];
-  const convHistory = [3.8, 3.5, 3.6, 3.2, 3.4, 3.1, stats.conversion];
+const StatsCards = ({ stats, chartData = [] }: Props) => {
+  const safeChart = Array.isArray(chartData) ? chartData : [];
+
+  const revenueHistory = buildSparkData(
+    safeChart,
+    (d) => d.revenue,
+    stats.revenue,
+  );
+
+  // Users and conversion have no chart series, so use synthetic histories
+  const usersHistory =
+    safeChart.length >= 2
+      ? [890, 920, 980, 1050, 1100, 1180, stats.users]
+      : [stats.users, stats.users];
+
+  const convHistory =
+    safeChart.length >= 2
+      ? [3.8, 3.5, 3.6, 3.2, 3.4, 3.1, stats.conversion]
+      : [stats.conversion, stats.conversion];
 
   const cards: CardConfig[] = [
     {

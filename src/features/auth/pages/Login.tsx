@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   HiArrowPath,
   HiEnvelope,
+  HiExclamationCircle,
   HiLockClosed,
   HiSquares2X2,
 } from "react-icons/hi2";
@@ -11,15 +12,82 @@ import ThemeToggle from "../../../components/ui/ThemeToggle";
 import { setToken } from "../../../utils/auth";
 import { loginApi } from "../api/authApi";
 
+// ── Types ───────────────────────────────────────────────────────────────────
+
+type FieldErrors = {
+  email?: string;
+  password?: string;
+};
+
+// ── Validation helpers ──────────────────────────────────────────────────────
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validate = (email: string, password: string): FieldErrors => {
+  const errors: FieldErrors = {};
+
+  if (!email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_RE.test(email.trim())) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!password) {
+    errors.password = "Password is required.";
+  } else if (password.length < 6) {
+    errors.password = "Password must be at least 6 characters.";
+  }
+
+  return errors;
+};
+
+const hasErrors = (errors: FieldErrors) => Object.keys(errors).length > 0;
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+const FieldError = ({ message }: { message?: string }) => {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 flex items-center gap-1 text-xs text-red-500 dark:text-red-400 animate-fade-in">
+      <HiExclamationCircle className="w-3.5 h-3.5 shrink-0" />
+      {message}
+    </p>
+  );
+};
+
+// ── Login page ──────────────────────────────────────────────────────────────
+
 const Login = () => {
   const navigate = useNavigate();
+  const emailRef = useRef<HTMLInputElement>(null);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // Track whether the user has attempted submission (to show inline errors)
+  const [submitted, setSubmitted] = useState(false);
+
+  // Auto-focus email on mount
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
+
+  // Re-validate live once the user has attempted to submit
+  useEffect(() => {
+    if (submitted) {
+      setFieldErrors(validate(email, password));
+    }
+  }, [email, password, submitted]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      toast.error("Please fill in all fields.");
+    setSubmitted(true);
+    const errors = validate(email, password);
+    setFieldErrors(errors);
+
+    if (hasErrors(errors)) {
+      // Focus the first invalid field for accessibility
+      if (errors.email) emailRef.current?.focus();
       return;
     }
 
@@ -27,30 +95,46 @@ const Login = () => {
 
     try {
       setLoading(true);
-      const res = await loginApi({ email, password });
+      const res = await loginApi({ email: email.trim(), password });
       setToken(res.token);
       toast.success(`Welcome back, ${res.user.name}!`, { id: loginToast });
       navigate("/dashboard");
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Login failed. Please try again.",
-        { id: loginToast },
-      );
+      const message =
+        err instanceof Error ? err.message : "Login failed. Please try again.";
+
+      toast.error(message, { id: loginToast });
+
+      // Surface credential errors as a field hint so users know what to fix
+      if (
+        message.toLowerCase().includes("invalid") ||
+        message.toLowerCase().includes("credential") ||
+        message.toLowerCase().includes("password") ||
+        message.toLowerCase().includes("email")
+      ) {
+        setFieldErrors({
+          email: " ", // non-empty to trigger red border without duplicate text
+          password: "Incorrect email or password.",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleLogin();
+    if (e.key === "Enter" && !loading) handleLogin();
   };
+
+  const emailInvalid = submitted && !!fieldErrors.email?.trim();
+  const passwordInvalid = submitted && !!fieldErrors.password;
 
   return (
     <div
       className="h-screen flex items-center justify-center relative overflow-hidden"
       style={{ background: "var(--surface-0)" }}
     >
-      {/* Subtle background geometry */}
+      {/* Background geometry */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -104,47 +188,92 @@ const Login = () => {
 
         {/* Form */}
         <div className="space-y-4">
+          {/* Email */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5">
+            <label
+              htmlFor="email"
+              className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5"
+            >
               Email
             </label>
             <div className="relative">
-              <HiEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-600 pointer-events-none" />
+              <HiEnvelope
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
+                  emailInvalid
+                    ? "text-red-400"
+                    : "text-gray-400 dark:text-gray-600"
+                }`}
+              />
               <input
+                id="email"
+                ref={emailRef}
                 type="email"
+                autoComplete="email"
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
+                aria-invalid={emailInvalid}
+                aria-describedby={emailInvalid ? "email-error" : undefined}
+                className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
                   placeholder-gray-300 dark:placeholder-gray-700
-                  border border-gray-200 dark:border-gray-800
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent
-                  transition-all"
+                  border focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    emailInvalid
+                      ? "border-red-400 dark:border-red-500 focus:ring-red-400/30"
+                      : "border-gray-200 dark:border-gray-800 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                  }`}
                 style={{ background: "var(--surface-0)" }}
               />
             </div>
+            <div id="email-error">
+              {/* Only show the error text if it's a real message (not the
+                  sentinel space we set for credential errors) */}
+              {fieldErrors.email?.trim() && (
+                <FieldError message={fieldErrors.email.trim()} />
+              )}
+            </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5"
+            >
               Password
             </label>
             <div className="relative">
-              <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-600 pointer-events-none" />
+              <HiLockClosed
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
+                  passwordInvalid
+                    ? "text-red-400"
+                    : "text-gray-400 dark:text-gray-600"
+                }`}
+              />
               <input
+                id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
+                aria-invalid={passwordInvalid}
+                aria-describedby={
+                  passwordInvalid ? "password-error" : undefined
+                }
+                className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
                   placeholder-gray-300 dark:placeholder-gray-700
-                  border border-gray-200 dark:border-gray-800
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent
-                  transition-all"
+                  border focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    passwordInvalid
+                      ? "border-red-400 dark:border-red-500 focus:ring-red-400/30"
+                      : "border-gray-200 dark:border-gray-800 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                  }`}
                 style={{ background: "var(--surface-0)" }}
               />
+            </div>
+            <div id="password-error">
+              <FieldError message={fieldErrors.password} />
             </div>
           </div>
         </div>
@@ -157,7 +286,7 @@ const Login = () => {
             flex items-center justify-center gap-2
             hover:shadow-lg active:scale-[0.99]"
           style={{
-            background: loading ? "var(--accent)" : "var(--accent)",
+            background: "var(--accent)",
             boxShadow: loading
               ? "none"
               : "0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent)",

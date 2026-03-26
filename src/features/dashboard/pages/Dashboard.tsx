@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { HiArrowPath } from "react-icons/hi2";
 import ChartSection from "../components/ChartSection";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
@@ -21,169 +22,8 @@ import type { User } from "../types";
 
 const PAGE_SIZE = 5;
 
-const Dashboard = () => {
-  const [filter, setFilter] = useState("all");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+// ── Inline sub-components ───────────────────────────────────────────────────
 
-  const { data, isLoading, isError: dashError } = useDashboard();
-  const { data: users = [], isError: usersError } = useUsers();
-
-  useEffect(() => {
-    if (dashError) toast.error("Failed to load dashboard data.");
-  }, [dashError]);
-
-  useEffect(() => {
-    if (usersError) toast.error("Failed to load users.");
-  }, [usersError]);
-
-  const filteredUsers = useFilteredUsers(users, filter);
-  const { query, setQuery, filteredBySearch } = useSearch(filteredUsers);
-  const { sortedItems, sortConfig, toggleSort } = useSort(filteredBySearch);
-  const pagination = usePagination(sortedItems, PAGE_SIZE);
-
-  const handleFilterChange = useCallback(
-    (value: string) => {
-      setFilter(value);
-      pagination.reset();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setQuery(value);
-      pagination.reset();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setQuery],
-  );
-
-  const handleClearFilter = useCallback(() => {
-    handleFilterChange("all");
-  }, [handleFilterChange]);
-
-  const handleSort = useCallback(
-    (key: Parameters<typeof toggleSort>[0]) => {
-      toggleSort(key);
-      pagination.reset();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [toggleSort],
-  );
-
-  const handleRowClick = useCallback((user: User) => {
-    setSelectedUser(user);
-  }, []);
-
-  const handleCloseDrawer = useCallback(() => {
-    setSelectedUser(null);
-  }, []);
-
-  if (isLoading) return <Skeleton />;
-  if (dashError) return <ErrorState />;
-  if (!data) return <EmptyState />;
-
-  const hasFilteredResults = filteredBySearch.length > 0;
-  const showNoResults = !hasFilteredResults && (query || filter !== "all");
-
-  return (
-    <div className="max-w-6xl mx-auto">
-      {/* Page header */}
-      <div className="mb-6 animate-fade-up">
-        <h1
-          className="text-xl font-bold text-gray-900 dark:text-white"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Dashboard
-        </h1>
-        <p className="text-sm text-gray-400 dark:text-gray-600 mt-0.5">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-      </div>
-
-      {/* Stats */}
-      <StatsCards stats={data.stats} chartData={data.chart} />
-
-      {/* Chart */}
-      <ChartSection data={data.chart} />
-
-      {/* Users section */}
-      <div
-        className="mt-4 animate-fade-up rounded-xl border overflow-hidden"
-        style={{
-          borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
-          animationDelay: "240ms",
-        }}
-      >
-        {/* Section header */}
-        <div
-          className="px-5 py-4 border-b flex items-center justify-between gap-4 flex-wrap"
-          style={{
-            background: "var(--surface-1)",
-            borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div>
-              <h2
-                className="text-sm font-semibold text-gray-900 dark:text-white"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Users
-              </h2>
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
-                {query
-                  ? `${filteredBySearch.length} result${filteredBySearch.length !== 1 ? "s" : ""}`
-                  : `${filteredUsers.length} ${filter !== "all" ? filter : "total"}`}
-              </p>
-            </div>
-            <Filters value={filter} onFilterChange={handleFilterChange} />
-          </div>
-          <SearchBar value={query} onChange={handleSearchChange} />
-        </div>
-
-        {hasFilteredResults ? (
-          <>
-            <UsersTable
-              users={pagination.paginatedItems}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              onRowClick={handleRowClick}
-              searchQuery={query}
-            />
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.totalItems}
-              pageSize={pagination.pageSize}
-              onPageChange={pagination.goToPage}
-            />
-          </>
-        ) : showNoResults ? (
-          <NoSearchResults
-            query={query}
-            filter={filter}
-            onClearSearch={() => handleSearchChange("")}
-            onClearFilter={handleClearFilter}
-          />
-        ) : (
-          <NoFilterResults filter={filter} onClear={handleClearFilter} />
-        )}
-      </div>
-
-      {/* User detail drawer */}
-      <UserDrawer user={selectedUser} onClose={handleCloseDrawer} />
-    </div>
-  );
-};
-
-// Inline component for no search results
 const NoSearchResults = ({
   query,
   filter,
@@ -245,5 +85,299 @@ const NoSearchResults = ({
     </div>
   </div>
 );
+
+/** Shown when the users fetch fails, with a retry button. */
+const UsersErrorState = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="flex flex-col items-center justify-center py-14 px-4 gap-3">
+    <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+      <span className="text-red-500 text-lg">!</span>
+    </div>
+    <div className="text-center">
+      <p className="text-sm font-semibold text-red-500 dark:text-red-400">
+        Failed to load users
+      </p>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+        There was a problem fetching the user list
+      </p>
+    </div>
+    <button
+      onClick={onRetry}
+      className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+        text-indigo-600 dark:text-indigo-400 transition-all duration-150"
+      style={{
+        background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+      }}
+    >
+      <HiArrowPath className="w-3.5 h-3.5" />
+      Try again
+    </button>
+  </div>
+);
+
+/** Shown when the users list is genuinely empty (no data at all). */
+const NoUsersState = () => (
+  <div className="flex flex-col items-center justify-center py-14 px-4 gap-3">
+    <div
+      className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
+      style={{ background: "color-mix(in srgb, currentColor 6%, transparent)" }}
+    >
+      👥
+    </div>
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+        No users yet
+      </p>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+        Users will appear here once they sign up
+      </p>
+    </div>
+  </div>
+);
+
+// ── Main page ───────────────────────────────────────────────────────────────
+
+const Dashboard = () => {
+  const [filter, setFilter] = useState("all");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const {
+    data,
+    isLoading,
+    isError: dashError,
+    refetch: refetchDash,
+  } = useDashboard();
+
+  const {
+    data: users = [],
+    isError: usersError,
+    isLoading: usersLoading,
+    refetch: refetchUsers,
+  } = useUsers();
+
+  // ── Error toasts (fire once per error transition) ──
+  useEffect(() => {
+    if (dashError) toast.error("Failed to load dashboard data.");
+  }, [dashError]);
+
+  useEffect(() => {
+    if (usersError) toast.error("Failed to load users.");
+  }, [usersError]);
+
+  // ── Derived data pipeline ──
+  const filteredUsers = useFilteredUsers(users, filter);
+  const { query, setQuery, filteredBySearch } = useSearch(filteredUsers);
+  const { sortedItems, sortConfig, toggleSort } = useSort(filteredBySearch);
+  const pagination = usePagination(sortedItems, PAGE_SIZE);
+
+  // ── Handlers ──
+  const handleFilterChange = useCallback(
+    (value: string) => {
+      setFilter(value);
+      pagination.reset();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      pagination.reset();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setQuery],
+  );
+
+  const handleClearFilter = useCallback(() => {
+    handleFilterChange("all");
+  }, [handleFilterChange]);
+
+  const handleSort = useCallback(
+    (key: Parameters<typeof toggleSort>[0]) => {
+      toggleSort(key);
+      pagination.reset();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [toggleSort],
+  );
+
+  const handleRowClick = useCallback((user: User) => {
+    setSelectedUser(user);
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
+    setSelectedUser(null);
+  }, []);
+
+  const handleRetryUsers = useCallback(() => {
+    void refetchUsers();
+  }, [refetchUsers]);
+
+  const handleRetryDash = useCallback(() => {
+    void refetchDash();
+  }, [refetchDash]);
+
+  // ── Render states ──
+  if (isLoading) return <Skeleton />;
+
+  if (dashError)
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <ErrorState />
+        <button
+          onClick={handleRetryDash}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold
+            text-indigo-600 dark:text-indigo-400 transition-all duration-150"
+          style={{
+            background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+          }}
+        >
+          <HiArrowPath className="w-4 h-4" />
+          Retry
+        </button>
+      </div>
+    );
+
+  if (!data) return <EmptyState />;
+
+  // ── Chart data guard ──
+  const chartData = Array.isArray(data.chart) ? data.chart : [];
+
+  // ── Users table display state ──
+  const hasFilteredResults = filteredBySearch.length > 0;
+  const showNoSearchResults =
+    !hasFilteredResults && (query.trim() !== "" || filter !== "all");
+
+  const renderUsersBody = () => {
+    if (usersLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <HiArrowPath className="w-5 h-5 animate-spin text-gray-400 dark:text-gray-600" />
+        </div>
+      );
+    }
+
+    if (usersError) {
+      return <UsersErrorState onRetry={handleRetryUsers} />;
+    }
+
+    // The raw users array is empty (no data at all)
+    if (users.length === 0) {
+      return <NoUsersState />;
+    }
+
+    if (hasFilteredResults) {
+      return (
+        <>
+          <UsersTable
+            users={pagination.paginatedItems}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onRowClick={handleRowClick}
+            searchQuery={query}
+          />
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            onPageChange={pagination.goToPage}
+          />
+        </>
+      );
+    }
+
+    if (showNoSearchResults) {
+      return (
+        <NoSearchResults
+          query={query}
+          filter={filter}
+          onClearSearch={() => handleSearchChange("")}
+          onClearFilter={handleClearFilter}
+        />
+      );
+    }
+
+    // Filter applied, but zero matches (e.g. "inactive" with no inactive users)
+    return <NoFilterResults filter={filter} onClear={handleClearFilter} />;
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Page header */}
+      <div className="mb-6 animate-fade-up">
+        <h1
+          className="text-xl font-bold text-gray-900 dark:text-white"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Dashboard
+        </h1>
+        <p className="text-sm text-gray-400 dark:text-gray-600 mt-0.5">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
+      </div>
+
+      {/* Stats */}
+      <StatsCards stats={data.stats} chartData={chartData} />
+
+      {/* Chart — handles empty array internally */}
+      <ChartSection data={chartData} />
+
+      {/* Users section */}
+      <div
+        className="mt-4 animate-fade-up rounded-xl border overflow-hidden"
+        style={{
+          borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
+          animationDelay: "240ms",
+        }}
+      >
+        {/* Section header */}
+        <div
+          className="px-5 py-4 border-b flex items-center justify-between gap-4 flex-wrap"
+          style={{
+            background: "var(--surface-1)",
+            borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div>
+              <h2
+                className="text-sm font-semibold text-gray-900 dark:text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Users
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+                {usersError
+                  ? "Unable to load"
+                  : query
+                    ? `${filteredBySearch.length} result${filteredBySearch.length !== 1 ? "s" : ""}`
+                    : `${filteredUsers.length} ${filter !== "all" ? filter : "total"}`}
+              </p>
+            </div>
+            {/* Only show filters when we have data */}
+            {!usersError && users.length > 0 && (
+              <Filters value={filter} onFilterChange={handleFilterChange} />
+            )}
+          </div>
+          {/* Only show search when we have data */}
+          {!usersError && users.length > 0 && (
+            <SearchBar value={query} onChange={handleSearchChange} />
+          )}
+        </div>
+
+        {renderUsersBody()}
+      </div>
+
+      {/* User detail drawer */}
+      <UserDrawer user={selectedUser} onClose={handleCloseDrawer} />
+    </div>
+  );
+};
 
 export default Dashboard;
