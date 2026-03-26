@@ -1,5 +1,22 @@
 [
   { "id": 1, "name": "John Doe", "status": "active", "revenue": 120 },
   { "id": 2, "name": "Jane Smith", "status": "inactive", "revenue": 80 },
-  { "id": 3, "name": "Michael Lee", "status": "active", "revenue": 200 }
+  { "id": 3, "name": "Michael Lee", "status": "active", "revenue": 200 },
+  { "id": 4, "name": "Sarah Connor", "status": "active", "revenue": 340 },
+  { "id": 5, "name": "David Kim", "status": "inactive", "revenue": 55 },
+  { "id": 6, "name": "Emily Chen", "status": "active", "revenue": 410 },
+  { "id": 7, "name": "Carlos Rivera", "status": "active", "revenue": 175 },
+  { "id": 8, "name": "Priya Patel", "status": "inactive", "revenue": 90 },
+  { "id": 9, "name": "James Walker", "status": "active", "revenue": 260 },
+  { "id": 10, "name": "Olivia Brown", "status": "active", "revenue": 315 },
+  { "id": 11, "name": "Liam Johnson", "status": "inactive", "revenue": 40 },
+  { "id": 12, "name": "Mia Davis", "status": "active", "revenue": 530 },
+  { "id": 13, "name": "Noah Wilson", "status": "active", "revenue": 185 },
+  { "id": 14, "name": "Sophia Martinez", "status": "inactive", "revenue": 70 },
+  { "id": 15, "name": "Ethan Taylor", "status": "active", "revenue": 290 },
+  { "id": 16, "name": "Ava Anderson", "status": "active", "revenue": 450 },
+  { "id": 17, "name": "Mason Thomas", "status": "inactive", "revenue": 65 },
+  { "id": 18, "name": "Isabella Jackson", "status": "active", "revenue": 380 },
+  { "id": 19, "name": "Logan White", "status": "active", "revenue": 220 },
+  { "id": 20, "name": "Charlotte Harris", "status": "inactive", "revenue": 110 }
 ]

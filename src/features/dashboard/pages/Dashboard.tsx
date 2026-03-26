@@ -20,7 +20,6 @@ const Dashboard = () => {
   const { data, isLoading, isError: dashError } = useDashboard();
   const { data: users = [], isError: usersError } = useUsers();
 
-  // Show toast when data fetches fail
   useEffect(() => {
     if (dashError) toast.error("Failed to load dashboard data.");
   }, [dashError]);
