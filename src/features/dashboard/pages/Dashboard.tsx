@@ -10,6 +10,7 @@ import StatsCards from "../components/StatsCards";
 import UsersTable from "../components/UsersTable";
 import { useDashboard } from "../hooks/useDashboard";
 import { usePagination } from "../hooks/usePagination";
+import { useSort } from "../hooks/useSort";
 import { useUsers } from "../hooks/useUsers";
 
 const PAGE_SIZE = 5;
@@ -31,7 +32,9 @@ const Dashboard = () => {
   const filteredUsers =
     filter === "all" ? users : users.filter((u) => u.status === filter);
 
-  const pagination = usePagination(filteredUsers, PAGE_SIZE);
+  const { sortedItems, sortConfig, toggleSort } = useSort(filteredUsers);
+
+  const pagination = usePagination(sortedItems, PAGE_SIZE);
 
   const handleFilterChange = (value: string) => {
     setFilter(value);
@@ -53,7 +56,14 @@ const Dashboard = () => {
       <ChartSection data={data.chart} />
 
       <div className="mt-6 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <UsersTable users={pagination.paginatedItems} />
+        <UsersTable
+          users={pagination.paginatedItems}
+          sortConfig={sortConfig}
+          onSort={(key) => {
+            toggleSort(key);
+            pagination.reset();
+          }}
+        />
         <Pagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
