@@ -1,35 +1,197 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap");
 
 /* Tailwind v4 dark mode via class strategy */
 @variant dark (&:where(.dark, .dark *));
 
+/* ── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+  --font-display: "Syne", system-ui, sans-serif;
+
+  /* Chart */
   --chart-axis-color: #9ca3af;
   --chart-tooltip-bg: #ffffff;
   --chart-tooltip-border: #e5e7eb;
   --chart-tooltip-color: #111827;
+
+  /* Surface elevations */
+  --surface-0: #f8f7f5;
+  --surface-1: #ffffff;
+  --surface-2: #f3f2f0;
+
+  /* Brand */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-muted: #eef2ff;
 }
 
 .dark {
-  --chart-axis-color: #6b7280;
-  --chart-tooltip-bg: #1f2937;
-  --chart-tooltip-border: #374151;
+  --chart-axis-color: #4b5563;
+  --chart-tooltip-bg: #111827;
+  --chart-tooltip-border: #1f2937;
   --chart-tooltip-color: #f9fafb;
+
+  --surface-0: #080c14;
+  --surface-1: #0d1117;
+  --surface-2: #111827;
 }
 
-/* ── react-hot-toast dark mode ────────────────────────────────────────────── */
-/* The Toaster renders outside React's tree, so we target it via :root class  */
+/* ── Base ───────────────────────────────────────────────────────────────── */
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--surface-0);
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Utility Animation Classes ──────────────────────────────────────────── */
+.animate-fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered children */
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+/* ── Shimmer Skeleton ───────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    color-mix(in srgb, var(--surface-2) 60%, var(--surface-1)) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% auto;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 6px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 99px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ── react-hot-toast dark mode ──────────────────────────────────────────── */
 .dark [data-hot-toast] {
-  background: #1f2937 !important; /* gray-800 */
-  color: #f9fafb !important; /* gray-50  */
-  border: 1px solid #374151 !important; /* gray-700 */
+  background: #111827 !important;
+  color: #f9fafb !important;
+  border: 1px solid #1f2937 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Smooth color transitions across the board */
+/* ── Focus Ring ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Selection ──────────────────────────────────────────────────────────── */
+::selection {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ── Transition reset (selective — not everything) ──────────────────────── */
 *,
 *::before,
 *::after {
-  transition-property: background-color, border-color, color;
-  transition-duration: 200ms;
-  transition-timing-function: ease;
+  transition-property:
+    background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

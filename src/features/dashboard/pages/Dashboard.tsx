@@ -31,19 +31,14 @@ const Dashboard = () => {
     if (usersError) toast.error("Failed to load users.");
   }, [usersError]);
 
-  // Memoized derivation — only recomputes when users or filter changes
   const filteredUsers = useFilteredUsers(users, filter);
-
   const { sortedItems, sortConfig, toggleSort } = useSort(filteredUsers);
-
   const pagination = usePagination(sortedItems, PAGE_SIZE);
 
   const handleFilterChange = useCallback(
     (value: string) => {
       setFilter(value);
       pagination.reset();
-      const label = value === "all" ? "all users" : `${value} users`;
-      toast.success(`Showing ${label}`, { duration: 2000 });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -69,14 +64,61 @@ const Dashboard = () => {
   const hasFilteredResults = filteredUsers.length > 0;
 
   return (
-    <div>
-      <Filters value={filter} onFilterChange={handleFilterChange} />
+    <div className="max-w-6xl mx-auto">
+      {/* Page header */}
+      <div className="mb-6 animate-fade-up">
+        <h1
+          className="text-xl font-bold text-gray-900 dark:text-white"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Dashboard
+        </h1>
+        <p className="text-sm text-gray-400 dark:text-gray-600 mt-0.5">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
+      </div>
 
+      {/* Stats */}
       <StatsCards stats={data.stats} />
 
+      {/* Chart */}
       <ChartSection data={data.chart} />
 
-      <div className="mt-6 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      {/* Users section */}
+      <div
+        className="mt-4 animate-fade-up rounded-xl border overflow-hidden"
+        style={{
+          borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
+          animationDelay: "240ms",
+        }}
+      >
+        {/* Section header */}
+        <div
+          className="px-5 py-4 border-b flex items-center justify-between"
+          style={{
+            background: "var(--surface-1)",
+            borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
+          }}
+        >
+          <div>
+            <h2
+              className="text-sm font-semibold text-gray-900 dark:text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Users
+            </h2>
+            <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+              {filteredUsers.length} {filter !== "all" ? filter : "total"}
+            </p>
+          </div>
+          <Filters value={filter} onFilterChange={handleFilterChange} />
+        </div>
+
         {hasFilteredResults ? (
           <>
             <UsersTable

@@ -5,23 +5,40 @@ type Props = {
   onClear: () => void;
 };
 
-/**
- * Shown when a filter produces zero results — distinct from the global
- * EmptyState (no data at all). Gives users a clear recovery action.
- */
 const NoFilterResults = ({ filter, onClear }: Props) => {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 gap-3 bg-white dark:bg-gray-900">
-      <HiMagnifyingGlass className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-        No <span className="text-gray-900 dark:text-white">{filter}</span> users
-        found
-      </p>
+    <div
+      className="flex flex-col items-center justify-center py-14 px-4 gap-3"
+      style={{ background: "var(--surface-1)" }}
+    >
+      <div
+        className="w-10 h-10 rounded-full flex items-center justify-center"
+        style={{
+          background: "color-mix(in srgb, currentColor 6%, transparent)",
+        }}
+      >
+        <HiMagnifyingGlass className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          No{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {filter}
+          </span>{" "}
+          users
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+          Try adjusting the filter
+        </p>
+      </div>
       <button
         onClick={onClear}
-        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+        className="mt-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 transition-all duration-150"
+        style={{
+          background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+        }}
       >
-        Clear filter
+        Show all users
       </button>
     </div>
   );

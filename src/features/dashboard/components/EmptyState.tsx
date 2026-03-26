@@ -2,9 +2,23 @@ import { HiInbox } from "react-icons/hi2";
 
 const EmptyState = () => {
   return (
-    <div className="text-center py-10 flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
-      <HiInbox className="w-8 h-8" />
-      <p>No data available</p>
+    <div className="flex flex-col items-center justify-center py-24 gap-3 animate-fade-up">
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center"
+        style={{
+          background: "color-mix(in srgb, currentColor 6%, transparent)",
+        }}
+      >
+        <HiInbox className="w-6 h-6 text-gray-400 dark:text-gray-600" />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          No data available
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+          Check back later
+        </p>
+      </div>
     </div>
   );
 };
