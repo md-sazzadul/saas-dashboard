@@ -1,11 +1,18 @@
 type Props = {
+  value: string;
   onFilterChange: (value: string) => void;
 };
 
-const Filters = ({ onFilterChange }: Props) => {
+/**
+ * Controlled — receives `value` from parent so the select can be reset
+ * programmatically (e.g. from the NoFilterResults "Clear filter" button).
+ */
+
+const Filters = ({ value, onFilterChange }: Props) => {
   return (
     <div className="flex gap-4 mb-6">
       <select
+        value={value}
         onChange={(e) => onFilterChange(e.target.value)}
         className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900
           text-gray-900 dark:text-gray-100 px-3 py-2 rounded-lg text-sm
