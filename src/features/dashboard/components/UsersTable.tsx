@@ -14,6 +14,8 @@ type Props = {
   users: User[];
   sortConfig: SortConfig<User>;
   onSort: (key: SortableColumn) => void;
+  onRowClick?: (user: User) => void;
+  searchQuery?: string;
 };
 
 const COLUMNS: { key: SortableColumn; label: string; align?: string }[] = [
@@ -42,6 +44,32 @@ const getInitials = (name: string) =>
 const getAvatarColor = (name: string) =>
   AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
+const HighlightText = ({ text, query }: { text: string; query?: string }) => {
+  if (!query?.trim()) return <>{text}</>;
+  const regex = new RegExp(
+    `(${query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+    "gi",
+  );
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark
+            key={i}
+            className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded px-0.5"
+            style={{ background: undefined }}
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+};
+
 const SortIcon = ({
   columnKey,
   sortConfig,
@@ -59,7 +87,13 @@ const SortIcon = ({
   );
 };
 
-const UsersTable = ({ users, sortConfig, onSort }: Props) => {
+const UsersTable = ({
+  users,
+  sortConfig,
+  onSort,
+  onRowClick,
+  searchQuery,
+}: Props) => {
   if (!users.length)
     return (
       <p className="text-gray-400 dark:text-gray-600 p-6 text-sm">
@@ -99,7 +133,10 @@ const UsersTable = ({ users, sortConfig, onSort }: Props) => {
         {users.map((user: User, idx: number) => (
           <tr
             key={user.id}
-            className="border-b group hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors duration-100"
+            onClick={() => onRowClick?.(user)}
+            className={`border-b transition-colors duration-100 ${
+              onRowClick ? "cursor-pointer" : ""
+            } group hover:bg-indigo-50/50 dark:hover:bg-indigo-950/10`}
             style={{
               borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
               animationDelay: `${idx * 30}ms`,
@@ -115,7 +152,7 @@ const UsersTable = ({ users, sortConfig, onSort }: Props) => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-none">
-                    {user.name}
+                    <HighlightText text={user.name} query={searchQuery} />
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
                     ID #{user.id.toString().padStart(4, "0")}
@@ -131,12 +168,19 @@ const UsersTable = ({ users, sortConfig, onSort }: Props) => {
 
             {/* Revenue */}
             <td className="px-5 py-3.5 text-right">
-              <span
-                className="text-sm font-semibold text-gray-800 dark:text-gray-200 tabular-nums"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                ${user.revenue.toLocaleString()}
-              </span>
+              <div className="flex items-center justify-end gap-3">
+                <span
+                  className="text-sm font-semibold text-gray-800 dark:text-gray-200 tabular-nums"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  ${user.revenue.toLocaleString()}
+                </span>
+                {onRowClick && (
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-[10px] font-medium text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full">
+                    View
+                  </span>
+                )}
+              </div>
             </td>
           </tr>
         ))}
