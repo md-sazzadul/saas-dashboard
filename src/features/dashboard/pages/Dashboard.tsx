@@ -30,9 +30,7 @@ const Dashboard = () => {
   }, [usersError]);
 
   const filteredUsers =
-    filter === "all"
-      ? users
-      : users.filter((u: { status: string }) => u.status === filter);
+    filter === "all" ? users : users.filter((u) => u.status === filter);
 
   const pagination = usePagination(filteredUsers, PAGE_SIZE);
 
