@@ -121,8 +121,10 @@ const ChartSection = ({ data }: { data: ChartData[] }) => {
                   boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
                   padding: "8px 12px",
                 }}
-                formatter={(value: number) => [
-                  `$${value.toLocaleString()}`,
+                formatter={(value) => [
+                  typeof value === "number"
+                    ? `$${value.toLocaleString()}`
+                    : String(value ?? ""),
                   "Revenue",
                 ]}
                 cursor={{
