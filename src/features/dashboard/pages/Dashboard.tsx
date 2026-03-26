@@ -9,6 +9,7 @@ import Skeleton from "../components/Skeleton";
 import StatsCards from "../components/StatsCards";
 import UsersTable from "../components/UsersTable";
 import { useDashboard } from "../hooks/useDashboard";
+import { useFilteredUsers } from "../hooks/useFilteredUsers";
 import { usePagination } from "../hooks/usePagination";
 import { useSort } from "../hooks/useSort";
 import { useUsers } from "../hooks/useUsers";
@@ -29,8 +30,8 @@ const Dashboard = () => {
     if (usersError) toast.error("Failed to load users.");
   }, [usersError]);
 
-  const filteredUsers =
-    filter === "all" ? users : users.filter((u) => u.status === filter);
+  // Memoized derivation — only recomputes when users or filter changes
+  const filteredUsers = useFilteredUsers(users, filter);
 
   const { sortedItems, sortConfig, toggleSort } = useSort(filteredUsers);
 
