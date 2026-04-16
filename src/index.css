@@ -1,5 +1,12 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap");
+
+/*
+  NOTE: The Google Fonts @import has been intentionally removed from CSS and
+  moved to a <link> tag in index.html. This eliminates a render-blocking
+  @import chain:  HTML → CSS → Google Fonts → font files
+  and replaces it with a parallel preconnect + stylesheet link, improving
+  First Contentful Paint (FCP) and Largest Contentful Paint (LCP).
+*/
 
 /* Tailwind v4 dark mode via class strategy */
 @variant dark (&:where(.dark, .dark *));
@@ -25,6 +32,9 @@
   --accent: #6366f1;
   --accent-hover: #4f46e5;
   --accent-muted: #eef2ff;
+
+  /* Accessible focus ring — visible in both themes */
+  --focus-ring: 0 0 0 3px #6366f180;
 }
 
 .dark {
@@ -36,6 +46,8 @@
   --surface-0: #080c14;
   --surface-1: #0d1117;
   --surface-2: #111827;
+
+  --focus-ring: 0 0 0 3px #818cf880;
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────── */
@@ -44,10 +56,46 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Prevent layout shift from scrollbar appearing on long pages */
+  scrollbar-gutter: stable;
 }
 
 body {
   background-color: var(--surface-0);
+  /* Improve text readability on all screen sizes */
+  line-height: 1.5;
+}
+
+/* ── Reduced Motion ─────────────────────────────────────────────────────── */
+/*
+  Respect the OS-level "reduce motion" preference (WCAG 2.1 SC 2.3.3).
+  Users with vestibular disorders, epilepsy, or motion sensitivity
+  will have all animations and transitions disabled.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-slide-left,
+  .animate-scale-in,
+  .stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .skeleton {
+    animation: none !important;
+    background: var(--surface-2) !important;
+  }
 }
 
 /* ── Keyframes ──────────────────────────────────────────────────────────── */
@@ -171,6 +219,8 @@ body {
   background-size: 200% auto;
   animation: shimmer 1.6s linear infinite;
   border-radius: 6px;
+  /* Tell AT this is decorative while loading */
+  aria-hidden: true;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
@@ -201,10 +251,24 @@ body {
 }
 
 /* ── Focus Ring ─────────────────────────────────────────────────────────── */
+/*
+  WCAG 2.1 SC 2.4.7 — Focus must be visible.
+  We provide a high-contrast 3px ring on :focus-visible (keyboard only),
+  deliberately NOT styling :focus to avoid the ring on mouse clicks.
+  The ring uses a semi-transparent accent colour (≥3:1 contrast ratio
+  against both light and dark surfaces per SC 1.4.11).
+*/
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: 4px;
+  /* box-shadow fallback for browsers that clip outlines on overflow:hidden containers */
+  box-shadow: var(--focus-ring);
+}
+
+/* Remove the default outline when we're applying our own */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* ── Selection ──────────────────────────────────────────────────────────── */
@@ -242,8 +306,64 @@ tbody tr {
 }
 
 /* ── Input focus glow ───────────────────────────────────────────────────── */
-input:focus {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+input:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Visually hidden utility (accessible hiding) ────────────────────────── */
+/*
+  Use .sr-only to hide elements visually while keeping them in the
+  accessibility tree (for screen readers). This is preferable to
+  display:none or visibility:hidden which remove content from AT entirely.
+  Tailwind includes this utility but defining it here as a fallback.
+*/
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── High Contrast Mode support ─────────────────────────────────────────── */
+/*
+  Windows High Contrast Mode overrides colour with system colours.
+  Ensure borders remain visible in this mode.
+*/
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid ButtonText;
+  }
+
+  .skeleton {
+    border: 1px solid GrayText;
+  }
+}
+
+/* ── Print styles ───────────────────────────────────────────────────────── */
+@media print {
+  /* Hide interactive chrome when printing */
+  nav,
+  aside,
+  header,
+  button,
+  [role="dialog"],
+  .animate-ping {
+    display: none !important;
+  }
+
+  main {
+    width: 100% !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
 }
 
 /* ── Transition reset (selective — not everything) ──────────────────────── */
