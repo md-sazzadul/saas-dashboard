@@ -27,14 +27,46 @@ const SearchBar = ({
   }, []);
 
   return (
-    <div className="relative flex items-center">
-      <HiMagnifyingGlass className="absolute left-3 w-3.5 h-3.5 text-gray-400 dark:text-gray-600 pointer-events-none" />
+    /*
+      role="search" is a landmark role that identifies this as a search
+      widget. AT users can jump directly to it via landmark navigation.
+      aria-label distinguishes it from any other search regions on the page.
+    */
+    <div
+      role="search"
+      aria-label="Search users"
+      className="relative flex items-center"
+    >
+      <HiMagnifyingGlass
+        aria-hidden="true"
+        className="absolute left-3 w-3.5 h-3.5 text-gray-400 dark:text-gray-600 pointer-events-none"
+      />
       <input
         ref={inputRef}
-        type="text"
+        id="user-search"
+        type="search"
+        /*
+          type="search" activates mobile keyboards with a search action key.
+          It also enables the browser's built-in clear button on some
+          browsers, which we supplement with our custom clear button.
+        */
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        /*
+          aria-label provides an accessible name since there is no visible
+          <label> element here. If a <label> were present, we'd use htmlFor
+          instead (a visible label is preferred per WCAG SC 2.4.6).
+        */
+        aria-label="Search users by name or ID"
+        /*
+          aria-describedby references the keyboard shortcut hint so AT
+          announces it when the input is focused:
+          "Search users by name or ID. Use ⌘K or Ctrl+K to focus."
+        */
+        aria-describedby="search-hint"
+        autoComplete="off"
+        spellCheck={false}
         className="w-48 pl-8 pr-8 py-1.5 rounded-lg text-xs
           text-gray-700 dark:text-gray-300
           placeholder-gray-300 dark:placeholder-gray-700
@@ -55,16 +87,25 @@ const SearchBar = ({
             onChange("");
             inputRef.current?.focus();
           }}
+          type="button"
+          aria-label="Clear search"
           className="absolute right-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
-          <HiXMark className="w-3.5 h-3.5" />
+          <HiXMark aria-hidden="true" className="w-3.5 h-3.5" />
         </button>
       )}
-      {!value && (
-        <kbd className="absolute right-2.5 hidden sm:inline-flex items-center gap-0.5 text-[9px] font-medium text-gray-300 dark:text-gray-700 font-mono">
-          ⌘K
-        </kbd>
-      )}
+      {/*
+        Keyboard hint: visually visible, also read by AT via aria-describedby.
+        The hint text spells out what the shortcut does so it's useful
+        even when read aloud (avoid "⌘K" without context for screen readers).
+      */}
+      <span
+        id="search-hint"
+        className="absolute right-2.5 hidden sm:inline-flex items-center gap-0.5 text-[9px] font-medium text-gray-300 dark:text-gray-700 font-mono pointer-events-none"
+        aria-label="Press Command K or Control K to focus search"
+      >
+        {value ? null : "⌘K"}
+      </span>
     </div>
   );
 };
