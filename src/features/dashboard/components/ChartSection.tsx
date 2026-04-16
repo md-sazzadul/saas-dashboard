@@ -11,8 +11,13 @@ import {
 import type { ChartData } from "../types";
 
 const EmptyChart = () => (
-  <div className="h-60 flex flex-col items-center justify-center gap-3">
+  <div
+    className="h-60 flex flex-col items-center justify-center gap-3"
+    role="img"
+    aria-label="No revenue data available to display"
+  >
     <div
+      aria-hidden="true"
       className="w-10 h-10 rounded-full flex items-center justify-center"
       style={{ background: "color-mix(in srgb, currentColor 6%, transparent)" }}
     >
@@ -32,8 +37,20 @@ const EmptyChart = () => (
 const ChartSection = ({ data }: { data: ChartData[] }) => {
   const hasData = Array.isArray(data) && data.length > 0;
 
+  /*
+    Build a text summary of the chart data for screen readers.
+    Since SVG charts are largely inaccessible to AT, providing a
+    meaningful text alternative satisfies WCAG SC 1.1.1 (Non-text Content).
+  */
+  const chartSummary = hasData
+    ? `Revenue chart showing ${data.length} months of data. ` +
+      data.map((d) => `${d.name}: $${d.revenue.toLocaleString()}`).join(", ") +
+      `. Latest: $${data[data.length - 1].revenue.toLocaleString()}.`
+    : "No revenue data available.";
+
   return (
-    <div
+    <section
+      aria-labelledby="chart-section-heading"
       className="animate-fade-up rounded-xl border mt-4 overflow-hidden"
       style={{
         background: "var(--surface-1)",
@@ -49,6 +66,7 @@ const ChartSection = ({ data }: { data: ChartData[] }) => {
       >
         <div>
           <h3
+            id="chart-section-heading"
             className="text-sm font-semibold text-gray-900 dark:text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
@@ -59,7 +77,7 @@ const ChartSection = ({ data }: { data: ChartData[] }) => {
           </p>
         </div>
         {hasData && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" aria-hidden="true">
             <div className="w-2 h-2 rounded-full bg-indigo-500" />
             <span className="text-xs text-gray-400 dark:text-gray-600 font-medium">
               Revenue
@@ -72,87 +90,110 @@ const ChartSection = ({ data }: { data: ChartData[] }) => {
         {!hasData ? (
           <EmptyChart />
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart
-              data={data}
-              margin={{ top: 4, right: 4, left: -8, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--chart-axis-color)"
-                strokeOpacity={0.2}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="name"
-                tick={{
-                  fill: "var(--chart-axis-color)",
-                  fontSize: 11,
-                  fontFamily: "var(--font-sans)",
-                }}
-                axisLine={false}
-                tickLine={false}
-                dy={8}
-              />
-              <YAxis
-                tick={{
-                  fill: "var(--chart-axis-color)",
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono)",
-                }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--chart-tooltip-bg)",
-                  border: "1px solid var(--chart-tooltip-border)",
-                  borderRadius: "10px",
-                  color: "var(--chart-tooltip-color)",
-                  fontSize: "12px",
-                  fontFamily: "var(--font-sans)",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-                  padding: "8px 12px",
-                }}
-                formatter={(value) => [
-                  typeof value === "number"
-                    ? `$${value.toLocaleString()}`
-                    : String(value ?? ""),
-                  "Revenue",
-                ]}
-                cursor={{
-                  stroke: "#6366f1",
-                  strokeOpacity: 0.3,
-                  strokeWidth: 1,
-                  strokeDasharray: "4 4",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#6366f1"
-                strokeWidth={2}
-                fill="url(#revenueGrad)"
-                dot={false}
-                activeDot={{
-                  r: 4,
-                  fill: "#6366f1",
-                  strokeWidth: 2,
-                  stroke: "var(--chart-tooltip-bg)",
-                }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          /*
+            The chart figure uses:
+            - role="img" to declare it as an image (non-interactive graphic)
+            - aria-label with a full data summary for screen reader users
+            - The actual chart is aria-hidden so AT doesn't try to read SVG noise
+          */
+          <figure role="img" aria-label={chartSummary} className="m-0 p-0">
+            {/* Visually hidden text alternative (belt-and-suspenders) */}
+            <figcaption className="sr-only">{chartSummary}</figcaption>
+
+            <div aria-hidden="true">
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart
+                  data={data}
+                  margin={{ top: 4, right: 4, left: -8, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="revenueGrad"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#6366f1"
+                        stopOpacity={0.15}
+                      />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--chart-axis-color)"
+                    strokeOpacity={0.2}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fill: "var(--chart-axis-color)",
+                      fontSize: 11,
+                      fontFamily: "var(--font-sans)",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={8}
+                  />
+                  <YAxis
+                    tick={{
+                      fill: "var(--chart-axis-color)",
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--chart-tooltip-bg)",
+                      border: "1px solid var(--chart-tooltip-border)",
+                      borderRadius: "10px",
+                      color: "var(--chart-tooltip-color)",
+                      fontSize: "12px",
+                      fontFamily: "var(--font-sans)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                      padding: "8px 12px",
+                    }}
+                    formatter={(value) => [
+                      typeof value === "number"
+                        ? `$${value.toLocaleString()}`
+                        : String(value ?? ""),
+                      "Revenue",
+                    ]}
+                    cursor={{
+                      stroke: "#6366f1",
+                      strokeOpacity: 0.3,
+                      strokeWidth: 1,
+                      strokeDasharray: "4 4",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    fill="url(#revenueGrad)"
+                    dot={false}
+                    activeDot={{
+                      r: 4,
+                      fill: "#6366f1",
+                      strokeWidth: 2,
+                      stroke: "var(--chart-tooltip-bg)",
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </figure>
         )}
       </div>
-    </div>
+    </section>
   );
 };
 
