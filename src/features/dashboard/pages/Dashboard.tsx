@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { HiArrowPath } from "react-icons/hi2";
 import ChartSection from "../components/ChartSection";
@@ -38,9 +38,13 @@ const NoSearchResults = ({
   <div
     className="flex flex-col items-center justify-center py-14 px-4 gap-3"
     style={{ background: "var(--surface-1)" }}
+    role="status"
+    aria-live="polite"
+    aria-label={`No search results for "${query}"${filter !== "all" ? ` in ${filter} users` : ""}`}
   >
     <div
       className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+      aria-hidden="true"
       style={{ background: "color-mix(in srgb, currentColor 6%, transparent)" }}
     >
       🔍
@@ -48,13 +52,13 @@ const NoSearchResults = ({
     <div className="text-center">
       <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
         No results for{" "}
-        <span className="font-semibold text-gray-900 dark:text-white">
+        <strong className="font-semibold text-gray-900 dark:text-white">
           "{query}"
-        </span>
+        </strong>
         {filter !== "all" && (
           <span className="text-gray-400">
             {" "}
-            in <span className="font-semibold">{filter}</span>
+            in <strong className="font-semibold">{filter}</strong>
           </span>
         )}
       </p>
@@ -66,6 +70,7 @@ const NoSearchResults = ({
       {query && (
         <button
           onClick={onClearSearch}
+          type="button"
           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 transition-all duration-150"
           style={{
             background: "color-mix(in srgb, var(--accent) 10%, transparent)",
@@ -77,6 +82,7 @@ const NoSearchResults = ({
       {filter !== "all" && (
         <button
           onClick={onClearFilter}
+          type="button"
           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150"
         >
           Reset filter
@@ -86,10 +92,16 @@ const NoSearchResults = ({
   </div>
 );
 
-/** Shown when the users fetch fails, with a retry button. */
 const UsersErrorState = ({ onRetry }: { onRetry: () => void }) => (
-  <div className="flex flex-col items-center justify-center py-14 px-4 gap-3">
-    <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+  <div
+    className="flex flex-col items-center justify-center py-14 px-4 gap-3"
+    role="alert"
+    aria-live="assertive"
+  >
+    <div
+      aria-hidden="true"
+      className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center"
+    >
       <span className="text-red-500 text-lg">!</span>
     </div>
     <div className="text-center">
@@ -102,22 +114,26 @@ const UsersErrorState = ({ onRetry }: { onRetry: () => void }) => (
     </div>
     <button
       onClick={onRetry}
+      type="button"
       className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
         text-indigo-600 dark:text-indigo-400 transition-all duration-150"
       style={{
         background: "color-mix(in srgb, var(--accent) 10%, transparent)",
       }}
     >
-      <HiArrowPath className="w-3.5 h-3.5" />
+      <HiArrowPath aria-hidden="true" className="w-3.5 h-3.5" />
       Try again
     </button>
   </div>
 );
 
-/** Shown when the users list is genuinely empty (no data at all). */
 const NoUsersState = () => (
-  <div className="flex flex-col items-center justify-center py-14 px-4 gap-3">
+  <div
+    className="flex flex-col items-center justify-center py-14 px-4 gap-3"
+    role="status"
+  >
     <div
+      aria-hidden="true"
       className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
       style={{ background: "color-mix(in srgb, currentColor 6%, transparent)" }}
     >
@@ -140,6 +156,23 @@ const Dashboard = () => {
   const [filter, setFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  /*
+    announceRef: an off-screen ARIA live region that announces dynamic
+    changes (search result counts, filter changes) to screen reader users
+    without visually disrupting the layout. We use aria-live="polite" so
+    the announcement waits for the user to finish their current action.
+  */
+  const announceRef = useRef<HTMLParagraphElement>(null);
+  const announce = useCallback((message: string) => {
+    if (announceRef.current) {
+      // Clear first so identical consecutive messages still fire
+      announceRef.current.textContent = "";
+      requestAnimationFrame(() => {
+        if (announceRef.current) announceRef.current.textContent = message;
+      });
+    }
+  }, []);
+
   const {
     data,
     isLoading,
@@ -154,7 +187,6 @@ const Dashboard = () => {
     refetch: refetchUsers,
   } = useUsers();
 
-  // ── Error toasts (fire once per error transition) ──
   useEffect(() => {
     if (dashError) toast.error("Failed to load dashboard data.");
   }, [dashError]);
@@ -168,6 +200,29 @@ const Dashboard = () => {
   const { query, setQuery, filteredBySearch } = useSearch(filteredUsers);
   const { sortedItems, sortConfig, toggleSort } = useSort(filteredBySearch);
   const pagination = usePagination(sortedItems, PAGE_SIZE);
+
+  // Announce result count changes to screen readers
+  useEffect(() => {
+    if (!usersLoading && !usersError) {
+      if (query.trim()) {
+        announce(
+          `${filteredBySearch.length} result${filteredBySearch.length !== 1 ? "s" : ""} for "${query}"`,
+        );
+      } else if (filter !== "all") {
+        announce(
+          `Showing ${filteredUsers.length} ${filter} user${filteredUsers.length !== 1 ? "s" : ""}`,
+        );
+      }
+    }
+  }, [
+    query,
+    filter,
+    filteredBySearch.length,
+    filteredUsers.length,
+    usersLoading,
+    usersError,
+    announce,
+  ]);
 
   // ── Handlers ──
   const handleFilterChange = useCallback(
@@ -218,21 +273,36 @@ const Dashboard = () => {
   }, [refetchDash]);
 
   // ── Render states ──
-  if (isLoading) return <Skeleton />;
+  if (isLoading) {
+    return (
+      /*
+        aria-busy signals to AT that the region is loading.
+        aria-label describes what is loading.
+      */
+      <div aria-busy="true" aria-label="Loading dashboard data">
+        <Skeleton />
+      </div>
+    );
+  }
 
   if (dashError)
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <div
+        role="alert"
+        aria-live="assertive"
+        className="flex flex-col items-center justify-center py-24 gap-4"
+      >
         <ErrorState />
         <button
           onClick={handleRetryDash}
+          type="button"
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold
             text-indigo-600 dark:text-indigo-400 transition-all duration-150"
           style={{
             background: "color-mix(in srgb, var(--accent) 10%, transparent)",
           }}
         >
-          <HiArrowPath className="w-4 h-4" />
+          <HiArrowPath aria-hidden="true" className="w-4 h-4" />
           Retry
         </button>
       </div>
@@ -240,10 +310,7 @@ const Dashboard = () => {
 
   if (!data) return <EmptyState />;
 
-  // ── Chart data guard ──
   const chartData = Array.isArray(data.chart) ? data.chart : [];
-
-  // ── Users table display state ──
   const hasFilteredResults = filteredBySearch.length > 0;
   const showNoSearchResults =
     !hasFilteredResults && (query.trim() !== "" || filter !== "all");
@@ -251,20 +318,23 @@ const Dashboard = () => {
   const renderUsersBody = () => {
     if (usersLoading) {
       return (
-        <div className="flex items-center justify-center py-12">
-          <HiArrowPath className="w-5 h-5 animate-spin text-gray-400 dark:text-gray-600" />
+        <div
+          className="flex items-center justify-center py-12"
+          aria-busy="true"
+          aria-label="Loading users"
+        >
+          <HiArrowPath
+            aria-hidden="true"
+            className="w-5 h-5 animate-spin text-gray-400 dark:text-gray-600"
+          />
+          {/* Visually hidden text for screen readers */}
+          <span className="sr-only">Loading users, please wait…</span>
         </div>
       );
     }
 
-    if (usersError) {
-      return <UsersErrorState onRetry={handleRetryUsers} />;
-    }
-
-    // The raw users array is empty (no data at all)
-    if (users.length === 0) {
-      return <NoUsersState />;
-    }
+    if (usersError) return <UsersErrorState onRetry={handleRetryUsers} />;
+    if (users.length === 0) return <NoUsersState />;
 
     if (hasFilteredResults) {
       return (
@@ -298,13 +368,27 @@ const Dashboard = () => {
       );
     }
 
-    // Filter applied, but zero matches (e.g. "inactive" with no inactive users)
     return <NoFilterResults filter={filter} onClear={handleClearFilter} />;
   };
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Page header */}
+      {/*
+        Off-screen ARIA live region for dynamic announcements.
+        Positioned off-screen via sr-only so it's invisible but
+        picked up by screen readers whenever its content changes.
+      */}
+      <p
+        ref={announceRef}
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
+
+      {/* ── Page header ─────────────────────────────────────────────────
+          <h1> establishes the heading hierarchy for the page. There should
+          be exactly ONE <h1> per page (WCAG 2.4.6). Sub-sections use <h2>.
+      ─────────────────────────────────────────────────────────────────── */}
       <div className="mb-6 animate-fade-up">
         <h1
           className="text-xl font-bold text-gray-900 dark:text-white"
@@ -312,24 +396,45 @@ const Dashboard = () => {
         >
           Dashboard
         </h1>
+        {/* time element with datetime attribute for semantic date markup */}
         <p className="text-sm text-gray-400 dark:text-gray-600 mt-0.5">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          <time dateTime={new Date().toISOString().split("T")[0]}>
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </time>
         </p>
       </div>
 
-      {/* Stats */}
-      <StatsCards stats={data.stats} chartData={chartData} />
+      {/* ── Stats ───────────────────────────────────────────────────────
+          Wrapped in <section> with an accessible heading so AT users can
+          navigate directly to this region via heading/landmark shortcuts.
+      ─────────────────────────────────────────────────────────────────── */}
+      <section aria-labelledby="stats-heading">
+        {/* aria-labelledby associates the section with its <h2> */}
+        <h2 id="stats-heading" className="sr-only">
+          Key metrics
+        </h2>
+        <StatsCards stats={data.stats} chartData={chartData} />
+      </section>
 
-      {/* Chart — handles empty array internally */}
-      <ChartSection data={chartData} />
+      {/* ── Chart ─────────────────────────────────────────────────────── */}
+      <section aria-labelledby="chart-heading">
+        <h2 id="chart-heading" className="sr-only">
+          Revenue overview chart
+        </h2>
+        <ChartSection data={chartData} />
+      </section>
 
-      {/* Users section */}
-      <div
+      {/* ── Users section ───────────────────────────────────────────────
+          <section> + aria-labelledby ties the visible "Users" heading
+          to the region, making it discoverable via screen reader landmarks.
+      ─────────────────────────────────────────────────────────────────── */}
+      <section
+        aria-labelledby="users-heading"
         className="mt-4 animate-fade-up rounded-xl border overflow-hidden"
         style={{
           borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
@@ -347,12 +452,18 @@ const Dashboard = () => {
           <div className="flex items-center gap-4">
             <div>
               <h2
+                id="users-heading"
                 className="text-sm font-semibold text-gray-900 dark:text-white"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Users
               </h2>
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+              {/* aria-live="polite" so count updates are announced */}
+              <p
+                className="text-xs text-gray-400 dark:text-gray-600 mt-0.5"
+                aria-live="polite"
+                aria-atomic="true"
+              >
                 {usersError
                   ? "Unable to load"
                   : query
@@ -360,19 +471,17 @@ const Dashboard = () => {
                     : `${filteredUsers.length} ${filter !== "all" ? filter : "total"}`}
               </p>
             </div>
-            {/* Only show filters when we have data */}
             {!usersError && users.length > 0 && (
               <Filters value={filter} onFilterChange={handleFilterChange} />
             )}
           </div>
-          {/* Only show search when we have data */}
           {!usersError && users.length > 0 && (
             <SearchBar value={query} onChange={handleSearchChange} />
           )}
         </div>
 
         {renderUsersBody()}
-      </div>
+      </section>
 
       {/* User detail drawer */}
       <UserDrawer user={selectedUser} onClose={handleCloseDrawer} />
