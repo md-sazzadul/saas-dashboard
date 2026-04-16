@@ -45,11 +45,24 @@ const hasErrors = (errors: FieldErrors) => Object.keys(errors).length > 0;
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-const FieldError = ({ message }: { message?: string }) => {
+const FieldError = ({ id, message }: { id: string; message?: string }) => {
   if (!message) return null;
   return (
-    <p className="mt-1.5 flex items-center gap-1 text-xs text-red-500 dark:text-red-400 animate-fade-in">
-      <HiExclamationCircle className="w-3.5 h-3.5 shrink-0" />
+    /*
+      role="alert" + aria-live="assertive" ensures the error is announced
+      immediately when it appears, without waiting for the next idle period.
+      This is critical for form validation errors (WCAG SC 3.3.1).
+    */
+    <p
+      id={id}
+      role="alert"
+      aria-live="assertive"
+      className="mt-1.5 flex items-center gap-1 text-xs text-red-500 dark:text-red-400 animate-fade-in"
+    >
+      <HiExclamationCircle
+        aria-hidden="true"
+        className="w-3.5 h-3.5 shrink-0"
+      />
       {message}
     </p>
   );
@@ -65,15 +78,12 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  // Track whether the user has attempted submission (to show inline errors)
   const [submitted, setSubmitted] = useState(false);
 
-  // Auto-focus email on mount
   useEffect(() => {
     emailRef.current?.focus();
   }, []);
 
-  // Re-validate live once the user has attempted to submit
   useEffect(() => {
     if (submitted) {
       setFieldErrors(validate(email, password));
@@ -86,7 +96,6 @@ const Login = () => {
     setFieldErrors(errors);
 
     if (hasErrors(errors)) {
-      // Focus the first invalid field for accessibility
       if (errors.email) emailRef.current?.focus();
       return;
     }
@@ -105,7 +114,6 @@ const Login = () => {
 
       toast.error(message, { id: loginToast });
 
-      // Surface credential errors as a field hint so users know what to fix
       if (
         message.toLowerCase().includes("invalid") ||
         message.toLowerCase().includes("credential") ||
@@ -113,7 +121,7 @@ const Login = () => {
         message.toLowerCase().includes("email")
       ) {
         setFieldErrors({
-          email: " ", // non-empty to trigger red border without duplicate text
+          email: " ",
           password: "Incorrect email or password.",
         });
       }
@@ -123,18 +131,24 @@ const Login = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !loading) handleLogin();
+    if (e.key === "Enter" && !loading) void handleLogin();
   };
 
   const emailInvalid = submitted && !!fieldErrors.email?.trim();
   const passwordInvalid = submitted && !!fieldErrors.password;
 
   return (
-    <div
+    /*
+      The outermost div is intentionally plain — the <main> landmark is
+      provided here because Login is a standalone full-screen page,
+      not nested inside DashboardLayout's <main>.
+    */
+    <main
       className="h-screen flex items-center justify-center relative overflow-hidden"
       style={{ background: "var(--surface-0)" }}
+      aria-label="Sign in to Meridian"
     >
-      {/* Background geometry */}
+      {/* Background geometry — decorative, hidden from AT */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -157,8 +171,8 @@ const Login = () => {
           boxShadow: "0 24px 64px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
         }}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 mb-8">
+        {/* Brand — decorative within the form card; page <title> covers the brand name for AT */}
+        <div className="flex items-center gap-2.5 mb-8" aria-hidden="true">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ background: "var(--accent)" }}
@@ -175,29 +189,52 @@ const Login = () => {
 
         {/* Heading */}
         <div className="mb-7">
-          <h2
+          <h1
             className="text-xl font-bold text-gray-900 dark:text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Welcome back
-          </h2>
-          <p className="text-sm text-gray-400 dark:text-gray-600 mt-1">
+          </h1>
+          <p
+            id="login-subtitle"
+            className="text-sm text-gray-400 dark:text-gray-600 mt-1"
+          >
             Sign in to continue to your dashboard
           </p>
         </div>
 
-        {/* Form */}
-        <div className="space-y-4">
+        {/*
+          <form> with noValidate disables native browser validation bubbles
+          (we handle validation ourselves for a consistent, accessible UI).
+          aria-describedby links the form to its subtitle for context.
+          onSubmit prevents Enter-key double-submission by handling the
+          submit event instead of a click.
+        */}
+        <form
+          noValidate
+          aria-describedby="login-subtitle"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!loading) void handleLogin();
+          }}
+          className="space-y-4"
+        >
           {/* Email */}
           <div>
+            {/*
+              <label> with htmlFor links to the input's id — the primary
+              mechanism for accessible form labelling (WCAG SC 1.3.1, 4.1.2).
+              Do NOT use aria-label on the input when a visible <label> exists.
+            */}
             <label
               htmlFor="email"
               className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5"
             >
-              Email
+              Email address
             </label>
             <div className="relative">
               <HiEnvelope
+                aria-hidden="true"
                 className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
                   emailInvalid
                     ? "text-red-400"
@@ -209,12 +246,23 @@ const Login = () => {
                 ref={emailRef}
                 type="email"
                 autoComplete="email"
+                /*
+                  autocomplete="email" helps password managers and browsers
+                  autofill the correct field, reducing cognitive load.
+                */
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={handleKeyDown}
-                aria-invalid={emailInvalid}
+                /*
+                  aria-invalid signals to AT that the field has an error.
+                  aria-describedby links to the error message element so
+                  AT reads it immediately after the field label:
+                  "Email address, invalid: Email is required."
+                */
+                aria-invalid={emailInvalid || undefined}
                 aria-describedby={emailInvalid ? "email-error" : undefined}
+                aria-required="true"
                 className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
                   placeholder-gray-300 dark:placeholder-gray-700
                   border focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
@@ -225,13 +273,9 @@ const Login = () => {
                 style={{ background: "var(--surface-0)" }}
               />
             </div>
-            <div id="email-error">
-              {/* Only show the error text if it's a real message (not the
-                  sentinel space we set for credential errors) */}
-              {fieldErrors.email?.trim() && (
-                <FieldError message={fieldErrors.email.trim()} />
-              )}
-            </div>
+            {fieldErrors.email?.trim() && (
+              <FieldError id="email-error" message={fieldErrors.email.trim()} />
+            )}
           </div>
 
           {/* Password */}
@@ -244,6 +288,7 @@ const Login = () => {
             </label>
             <div className="relative">
               <HiLockClosed
+                aria-hidden="true"
                 className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
                   passwordInvalid
                     ? "text-red-400"
@@ -258,10 +303,11 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
-                aria-invalid={passwordInvalid}
+                aria-invalid={passwordInvalid || undefined}
                 aria-describedby={
                   passwordInvalid ? "password-error" : undefined
                 }
+                aria-required="true"
                 className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm text-gray-900 dark:text-gray-100
                   placeholder-gray-300 dark:placeholder-gray-700
                   border focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
@@ -272,52 +318,68 @@ const Login = () => {
                 style={{ background: "var(--surface-0)" }}
               />
             </div>
-            <div id="password-error">
-              <FieldError message={fieldErrors.password} />
-            </div>
+            {fieldErrors.password && (
+              <FieldError id="password-error" message={fieldErrors.password} />
+            )}
           </div>
-        </div>
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="mt-6 w-full py-2.5 rounded-lg text-sm font-semibold text-white
-            disabled:opacity-60 transition-all duration-150
-            flex items-center justify-center gap-2
-            hover:shadow-lg active:scale-[0.99]"
-          style={{
-            background: "var(--accent)",
-            boxShadow: loading
-              ? "none"
-              : "0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent)",
-          }}
-          onMouseEnter={(e) => {
-            if (!loading)
+          {/*
+            type="submit" instead of type="button" — this lets the form's
+            native submit event fire on Enter keypress in any field,
+            which is the expected browser behaviour for forms.
+          */}
+          <button
+            type="submit"
+            disabled={loading}
+            /*
+              aria-busy signals to AT that the button is processing.
+              Combined with the visual spinner and "Signing in…" label,
+              this gives AT users the same feedback as sighted users.
+            */
+            aria-busy={loading}
+            className="mt-6 w-full py-2.5 rounded-lg text-sm font-semibold text-white
+              disabled:opacity-60 transition-all duration-150
+              flex items-center justify-center gap-2
+              hover:shadow-lg active:scale-[0.99]"
+            style={{
+              background: "var(--accent)",
+              boxShadow: loading
+                ? "none"
+                : "0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent)",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading)
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "var(--accent-hover)";
+            }}
+            onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.background =
-                "var(--accent-hover)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              "var(--accent)";
-          }}
-        >
-          {loading && <HiArrowPath className="w-4 h-4 animate-spin" />}
-          {loading ? "Signing in…" : "Sign in"}
-        </button>
+                "var(--accent)";
+            }}
+          >
+            {loading && (
+              <HiArrowPath
+                aria-hidden="true"
+                className="w-4 h-4 animate-spin"
+              />
+            )}
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
 
         {/* Hint */}
         <p className="mt-5 text-center text-xs text-gray-300 dark:text-gray-700">
           Use{" "}
-          <span className="font-mono text-gray-400 dark:text-gray-600">
+          <code className="font-mono text-gray-400 dark:text-gray-600">
             admin@example.com
-          </span>{" "}
+          </code>{" "}
           /{" "}
-          <span className="font-mono text-gray-400 dark:text-gray-600">
+          <code className="font-mono text-gray-400 dark:text-gray-600">
             123456
-          </span>
+          </code>
         </p>
       </div>
-    </div>
+    </main>
   );
 };
 
