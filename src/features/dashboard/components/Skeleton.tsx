@@ -1,10 +1,21 @@
+/*
+  Skeleton loading component.
+
+  Accessibility notes:
+  - The entire skeleton is wrapped in aria-hidden="true" because it's purely
+    visual chrome with no meaningful content. The parent caller should use
+    aria-busy="true" and aria-label on its container to communicate the
+    loading state to screen readers.
+  - Individual skeleton blocks have no role or label — they are decorative.
+*/
+
 const SkeletonBlock = ({ className }: { className: string }) => (
-  <div className={`skeleton ${className}`} />
+  <div className={`skeleton ${className}`} aria-hidden="true" />
 );
 
 const Skeleton = () => {
   return (
-    <div className="animate-fade-in space-y-6">
+    <div aria-hidden="true" className="animate-fade-in space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
