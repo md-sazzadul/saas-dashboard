@@ -2,7 +2,7 @@
 
 A production-grade analytics dashboard built with React 19, TypeScript, and Tailwind CSS v4. Demonstrates real-world frontend architecture patterns: data fetching, client-side state management, accessibility, and polished UI/UX.
 
-**Live demo:** [saas-dashboard-sazzad15.netlify.app](https://saas-dashboard-sazzad15.netlify.app/)
+**Live demo:** [saas-dashboard-sazzad15.netlify.app](https://saas-dashboard-sazzad15.netlify.app/)  
 **Credentials:** `admin@example.com` / `123456`
 
 ---
