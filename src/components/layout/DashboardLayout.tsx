@@ -191,18 +191,18 @@ const DashboardLayout = () => {
             role="group"
             aria-label="Header controls"
           >
-            {/* Live indicator */}
+            {/* This portfolio demo uses a fixed JSON seed, not a live feed. */}
             <div
               className="hidden sm:flex items-center gap-1.5"
-              aria-label="Data is live"
-              title="Dashboard data is live"
+              aria-label="Sample dashboard data"
+              title="This dashboard uses sample data"
             >
-              <span aria-hidden="true" className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
+              <span
+                aria-hidden="true"
+                className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400"
+              />
               <span className="text-xs text-gray-400 dark:text-gray-600 font-medium">
-                Live
+                Sample data
               </span>
             </div>
 
