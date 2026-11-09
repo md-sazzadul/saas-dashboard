@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   HiCheckCircle,
   HiCurrencyDollar,
@@ -6,11 +6,14 @@ import {
   HiXCircle,
   HiXMark,
 } from "react-icons/hi2";
+import type { UpdateUserInput } from "../api/dashboardApi";
 import type { User } from "../types";
 
 type Props = {
   user: User | null;
   onClose: () => void;
+  onSave: (id: number, input: UpdateUserInput) => Promise<void>;
+  isSaving: boolean;
 };
 
 const AVATAR_COLORS = [
@@ -60,7 +63,13 @@ const getInitials = (name: string) =>
 const getColor = (name: string) =>
   AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
-const UserDrawer = ({ user, onClose }: Props) => {
+const UserDrawer = ({ user, onClose, onSave, isSaving }: Props) => {
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setEditing(false);
+    setError("");
+  }, [user?.id]);
   const drawerRef = useRef<HTMLDivElement>(null);
   /*
     triggerRef: store the element that opened the drawer so we can
@@ -203,137 +212,169 @@ const UserDrawer = ({ user, onClose }: Props) => {
           id="drawer-description"
           className="flex-1 overflow-y-auto px-5 py-6 space-y-6"
         >
-          {/* Avatar + Name */}
-          <div className="flex flex-col items-center text-center gap-3">
-            {/* aria-hidden: initials avatar is decorative; the heading below names the user */}
-            <div
-              aria-hidden="true"
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold ${color.bg} ${color.text}`}
-            >
-              {getInitials(user.name)}
-            </div>
-            <div>
-              <h3
-                className="text-base font-bold text-gray-900 dark:text-white"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                {user.name}
-              </h3>
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 font-mono">
-                <abbr title={`User identifier ${user.id}`}>
-                  #{user.id.toString().padStart(4, "0")}
-                </abbr>
-              </p>
-            </div>
-          </div>
-
-          {/* Status badge */}
-          <div className="flex justify-center">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                user.status === "active"
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                  : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500"
-              }`}
-              role="status"
-              aria-label={`Account status: ${user.status === "active" ? "Active" : "Inactive"}`}
-            >
-              {user.status === "active" ? (
-                <HiCheckCircle aria-hidden="true" className="w-4 h-4" />
-              ) : (
-                <HiXCircle aria-hidden="true" className="w-4 h-4" />
-              )}
-              {user.status === "active" ? "Active account" : "Inactive account"}
-            </span>
-          </div>
-
-          {/* Divider */}
-          <hr
-            className="border-t"
-            style={{
-              borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
-            }}
-          />
-
-          {/* Stats */}
-          <div className="space-y-4">
-            {/* Revenue stat */}
-            <div
-              className="rounded-xl p-4 border"
-              style={{
-                background: "var(--surface-0)",
-                borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
+          {editing ? (
+            <EditUserForm
+              user={user}
+              isSaving={isSaving}
+              error={error}
+              onCancel={() => {
+                setEditing(false);
+                setError("");
               }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    aria-hidden="true"
-                    className={`w-6 h-6 rounded-md flex items-center justify-center ${color.bg} ${color.text}`}
-                  >
-                    <HiCurrencyDollar className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
-                    Revenue
-                  </span>
-                </div>
-                <span
-                  className="text-lg font-bold text-gray-900 dark:text-white tabular-nums"
-                  style={{ fontFamily: "var(--font-mono)" }}
+              onSave={async (input) => {
+                setError("");
+                try {
+                  await onSave(user.id, input);
+                  setEditing(false);
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "Could not save changes. Try again.",
+                  );
+                }
+              }}
+            />
+          ) : (
+            <>
+              {/* Avatar + Name */}
+              <div className="flex flex-col items-center text-center gap-3">
+                {/* aria-hidden: initials avatar is decorative; the heading below names the user */}
+                <div
+                  aria-hidden="true"
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold ${color.bg} ${color.text}`}
                 >
-                  ${user.revenue.toLocaleString()}
+                  {getInitials(user.name)}
+                </div>
+                <div>
+                  <h3
+                    className="text-base font-bold text-gray-900 dark:text-white"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {user.name}
+                  </h3>
+                  <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 font-mono">
+                    <abbr title={`User identifier ${user.id}`}>
+                      #{user.id.toString().padStart(4, "0")}
+                    </abbr>
+                  </p>
+                </div>
+              </div>
+
+              {/* Status badge */}
+              <div className="flex justify-center">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                    user.status === "active"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500"
+                  }`}
+                  role="status"
+                  aria-label={`Account status: ${user.status === "active" ? "Active" : "Inactive"}`}
+                >
+                  {user.status === "active" ? (
+                    <HiCheckCircle aria-hidden="true" className="w-4 h-4" />
+                  ) : (
+                    <HiXCircle aria-hidden="true" className="w-4 h-4" />
+                  )}
+                  {user.status === "active"
+                    ? "Active account"
+                    : "Inactive account"}
                 </span>
               </div>
-              {/*
+
+              {/* Divider */}
+              <hr
+                className="border-t"
+                style={{
+                  borderColor:
+                    "color-mix(in srgb, currentColor 8%, transparent)",
+                }}
+              />
+
+              {/* Stats */}
+              <div className="space-y-4">
+                {/* Revenue stat */}
+                <div
+                  className="rounded-xl p-4 border"
+                  style={{
+                    background: "var(--surface-0)",
+                    borderColor:
+                      "color-mix(in srgb, currentColor 6%, transparent)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        aria-hidden="true"
+                        className={`w-6 h-6 rounded-md flex items-center justify-center ${color.bg} ${color.text}`}
+                      >
+                        <HiCurrencyDollar className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+                        Revenue
+                      </span>
+                    </div>
+                    <span
+                      className="text-lg font-bold text-gray-900 dark:text-white tabular-nums"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      ${user.revenue.toLocaleString()}
+                    </span>
+                  </div>
+                  {/*
                 Progress bar: role="meter" semantically represents a value
                 within a known range. aria-valuenow/min/max/label give AT
                 the full picture without relying on visual width.
               */}
-              <div
-                role="meter"
-                aria-valuenow={revenuePercent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Revenue is ${revenuePercent.toFixed(0)}% of top earner`}
-                className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
-              >
-                <div
-                  aria-hidden="true"
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${revenuePercent}%`,
-                    background: color.accent,
-                    opacity: 0.8,
-                  }}
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
-                {revenuePercent.toFixed(0)}% of top earner
-              </p>
-            </div>
+                  <div
+                    role="meter"
+                    aria-valuenow={revenuePercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Revenue is ${revenuePercent.toFixed(0)}% of top earner`}
+                    className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
+                  >
+                    <div
+                      aria-hidden="true"
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${revenuePercent}%`,
+                        background: color.accent,
+                        opacity: 0.8,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+                    {revenuePercent.toFixed(0)}% of top earner
+                  </p>
+                </div>
 
-            {/* ID stat */}
-            <div
-              className="rounded-xl p-4 border"
-              style={{
-                background: "var(--surface-0)",
-                borderColor: "color-mix(in srgb, currentColor 6%, transparent)",
-              }}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <HiIdentification
-                  aria-hidden="true"
-                  className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600"
-                />
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
-                  User ID
-                </span>
+                {/* ID stat */}
+                <div
+                  className="rounded-xl p-4 border"
+                  style={{
+                    background: "var(--surface-0)",
+                    borderColor:
+                      "color-mix(in srgb, currentColor 6%, transparent)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <HiIdentification
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600"
+                    />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+                      User ID
+                    </span>
+                  </div>
+                  <p className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                    USR-{user.id.toString().padStart(6, "0")}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-mono text-gray-700 dark:text-gray-300">
-                USR-{user.id.toString().padStart(6, "0")}
-              </p>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Footer action */}
@@ -343,6 +384,23 @@ const UserDrawer = ({ user, onClose }: Props) => {
             borderColor: "color-mix(in srgb, currentColor 8%, transparent)",
           }}
         >
+          {editing ? (
+            <button
+              onClick={() => setEditing(false)}
+              type="button"
+              className="w-full py-2 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              Cancel editing
+            </button>
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              type="button"
+              className="w-full py-2 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+            >
+              Edit user
+            </button>
+          )}
           <button
             onClick={onClose}
             type="button"
@@ -356,6 +414,103 @@ const UserDrawer = ({ user, onClose }: Props) => {
         </div>
       </div>
     </>
+  );
+};
+
+const EditUserForm = ({
+  user,
+  isSaving,
+  error,
+  onCancel,
+  onSave,
+}: {
+  user: User;
+  isSaving: boolean;
+  error: string;
+  onCancel: () => void;
+  onSave: (input: UpdateUserInput) => Promise<void>;
+}) => {
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(
+    user.email ?? `${user.name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+  );
+  const [company, setCompany] = useState(user.company ?? "");
+  const [status, setStatus] = useState<User["status"]>(user.status);
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSave({
+          name: name.trim(),
+          email: email.trim(),
+          company: company.trim(),
+          status,
+        });
+      }}
+    >
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        Edit account
+      </h3>
+      {(
+        [
+          ["Name", name, setName, "text"],
+          ["Email", email, setEmail, "email"],
+          ["Company", company, setCompany, "text"],
+        ] as const
+      ).map(([label, value, setter, type]) => (
+        <label key={label} className="block text-xs font-medium text-gray-500">
+          {label}
+          <input
+            required={label !== "Company"}
+            type={type}
+            value={value}
+            onChange={(event) => setter(event.target.value)}
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm text-gray-900 dark:text-white"
+            style={{
+              background: "var(--surface-1)",
+              borderColor: "color-mix(in srgb, currentColor 12%, transparent)",
+            }}
+          />
+        </label>
+      ))}
+      <label className="block text-xs font-medium text-gray-500">
+        Status
+        <select
+          value={status}
+          onChange={(event) => setStatus(event.target.value as User["status"])}
+          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm text-gray-900 dark:text-white"
+          style={{
+            background: "var(--surface-1)",
+            borderColor: "color-mix(in srgb, currentColor 12%, transparent)",
+          }}
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </label>
+      {error && (
+        <p role="alert" className="text-xs text-red-600">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+        >
+          {isSaving ? "Saving…" : "Save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-3 py-2 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 };
 

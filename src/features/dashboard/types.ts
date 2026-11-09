@@ -19,4 +19,6 @@ export type User = {
   name: string;
   status: "active" | "inactive";
   revenue: number;
+  email?: string;
+  company?: string;
 };

@@ -17,7 +17,7 @@ import { useFilteredUsers } from "../hooks/useFilteredUsers";
 import { usePagination } from "../hooks/usePagination";
 import { useSearch } from "../hooks/useSearch";
 import { useSort } from "../hooks/useSort";
-import { useUsers } from "../hooks/useUsers";
+import { useUpdateUser, useUsers } from "../hooks/useUsers";
 import type { User } from "../types";
 
 const PAGE_SIZE = 5;
@@ -186,6 +186,7 @@ const Dashboard = () => {
     isLoading: usersLoading,
     refetch: refetchUsers,
   } = useUsers();
+  const updateUser = useUpdateUser();
 
   useEffect(() => {
     if (dashError) toast.error("Failed to load dashboard data.");
@@ -484,7 +485,20 @@ const Dashboard = () => {
       </section>
 
       {/* User detail drawer */}
-      <UserDrawer user={selectedUser} onClose={handleCloseDrawer} />
+      <UserDrawer
+        user={
+          selectedUser
+            ? (users.find((user) => user.id === selectedUser.id) ??
+              selectedUser)
+            : null
+        }
+        onClose={handleCloseDrawer}
+        isSaving={updateUser.isPending}
+        onSave={async (id, input) => {
+          await updateUser.mutateAsync({ id, input });
+          toast.success("User details saved");
+        }}
+      />
     </div>
   );
 };
